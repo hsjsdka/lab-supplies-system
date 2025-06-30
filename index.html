@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>实验室耗材信息情况</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1e88e5;
+            --secondary-color: #ff9800;
+            --success-color: #4caf50;
+            --warning-color: #ffc107;
+            --danger-color: #f44336;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+        }
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 0;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        .marquee {
+            background-color: #e3f2fd;
+            padding: 8px 0;
+            color: #0d47a1;
+            font-weight: bold;
+            margin-bottom: 15px;
+            border-radius: 3px;
+            overflow: hidden;
+            font-size: 0.9rem;
+        }
+        .search-container {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        .search-box {
+            display: flex;
+            margin-bottom: 12px;
+        }
+        #searchInput {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px 0 0 4px;
+            font-size: 1rem;
+            outline: none;
+            min-height: 42px;
+        }
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+        #searchButton {
+            padding: 0 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            min-height: 42px;
+        }
+        #searchButton:hover {
+            background-color: #1565c0;
+        }
+        .results-container {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            position: sticky;
+            top: 0;
+            font-weight: 500;
+        }
+        tr {
+            transition: background-color 0.2s;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        td {
+            cursor: pointer;
+            position: relative;
+        }
+        td.copyable::after {
+            content: "点击复制";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: #999;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        td.copyable:hover::after {
+            opacity: 1;
+        }
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #757575;
+        }
+        .admin-section {
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--warning-color);
+        }
+        .admin-title {
+            color: #ff8f00;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+        .hidden {
+            display: none;
+        }
+        .password-container {
+            margin-bottom: 15px;
+        }
+        #passwordInput {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        #loginButton {
+            padding: 10px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+        #loginButton:hover {
+            background-color: #e68a00;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .button-group button {
+            flex: 1;
+            min-width: 120px;
+        }
+        .upload-button {
+            background-color: var(--success-color);
+            color: white;
+        }
+        .upload-button:hover {
+            background-color: #3d8b40;
+        }
+        .export-button {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .export-button:hover {
+            background-color: #1565c0;
+        }
+        #uploadStatus {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        @media (max-width: 600px) {
+            th, td {
+                padding: 8px 6px;
+                font-size: 0.85rem;
+            }
+            .button-group {
+                flex-direction: column;
+            }
+            .button-group button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>实验室耗材信息情况</h1>
+        </header>
+        
+        <div class="marquee">
+            <marquee behavior="scroll" direction="left">该程序归武汉理工大学化生学院雷志鑫课题组使用</marquee>
+        </div>
+        
+        <div id="adminLoginSection" class="admin-section hidden">
+            <h2 class="admin-title">管理员登录</h2>
+            <div class="password-container">
+                <input type="password" id="passwordInput" placeholder="请输入管理员密码">
+                <button id="loginButton">登录</button>
+            </div>
+        </div>
+        
+        <div id="adminSection" class="admin-section hidden">
+            <h2 class="admin-title">管理员区域</h2>
+            <div class="file-input-container">
+                <label for="fileInput" class="file-input-label">导入Excel表格:</label>
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
+            </div>
+            <div class="button-group">
+                <button id="uploadButton" class="upload-button">上传并导入数据</button>
+                <button id="exportButton" class="export-button">导出当前数据</button>
+            </div>
+            <div id="uploadStatus"></div>
+        </div>
+        
+        <div class="search-container">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="输入耗材名称、规格或品牌等关键词...">
+                <button id="searchButton">搜索</button>
+            </div>
+            <div id="searchInfo"></div>
+        </div>
+        
+        <div class="results-container">
+            <div id="noResults" class="no-results">暂无数据，请输入关键词搜索</div>
+            <table id="resultsTable" class="hidden">
+                <thead>
+                    <tr>
+                        <th>货品名称</th>
+                        <th>规格</th>
+                        <th>单位</th>
+                        <th>单价</th>
+                        <th>品牌</th>
+                        <th>经办人</th>
+                        <th>联系方式</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // 默认数据
+        let defaultData = [
+            {"货品名称":"离心管架","规格":"2m l","单位":"个","单价":"7","品牌":"代购","经办人":"郭进军","联系方式":"V：guojinjun520"},
+            {"货品名称":"(NH4)2SO4","规格":"AR 500g","单位":"瓶","单价":"26","品牌":"国药","经办人":"王磊","联系方式":"Q:494612268"}
+        ];
+        
+        let currentData = [];
+        const ADMIN_PASSWORD = "whut123"; // 管理员密码
+
+        // 显示Toast提示
+        function showToast(message, duration = 2000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        // 复制文本到剪贴板
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('已复制: ' + text);
+            } catch (err) {
+                showToast('复制失败', 3000);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // 退出管理员模式
+        function exitAdminMode() {
+            localStorage.removeItem('adminAuth');
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            document.getElementById('adminSection').classList.add('hidden');
+            document.getElementById('adminLoginSection').classList.add('hidden');
+        }
+
+        // 处理Excel导入
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!confirm('确定导入数据吗？导入后将自动退出管理员模式')) {
+                document.getElementById('fileInput').value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    if (jsonData.length > 0) {
+                        const standardizedData = jsonData.map(item => ({
+                            "货品名称": item["货品名称"] || item["名称"] || "",
+                            "规格": item["规格"] || "",
+                            "单位": item["单位"] || "",
+                            "单价": item["单价"] || item["价格"] || "",
+                            "品牌": item["品牌"] || "",
+                            "经办人": item["经办人"] || item["负责人"] || "",
+                            "联系方式": item["联系方式"] || item["联系"] || ""
+                        }));
+
+                        currentData = standardizedData;
+                        localStorage.setItem('labSuppliesData', JSON.stringify(standardizedData));
+                        
+                        document.getElementById('uploadStatus').textContent = `成功导入 ${standardizedData.length} 条数据`;
+                        document.getElementById('uploadStatus').style.color = 'green';
+                        document.getElementById('fileInput').value = '';
+                        
+                        setTimeout(() => {
+                            exitAdminMode();
+                            showToast('数据导入成功！已自动返回用户模式', 3000);
+                            location.href = location.pathname;
+                        }, 800);
+                    }
+                } catch (error) {
+                    document.getElementById('uploadStatus').textContent = `导入失败: ${error.message}`;
+                    document.getElementById('uploadStatus').style.color = 'red';
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 初始化页面
+        function initializePage() {
+            // 检测移动设备
+            if (/Mobi|Android/i.test(navigator.userAgent)) {
+                document.body.classList.add('mobile');
+                // 禁用缩放以保证更好的移动体验
+                const viewportMeta = document.createElement('meta');
+                viewportMeta.name = 'viewport';
+                viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                document.head.appendChild(viewportMeta);
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdminParam = urlParams.get('admin') === 'true';
+            const isLocalAdmin = localStorage.getItem('adminAuth') === 'true';
+
+            // 检查管理员状态
+            if (isAdminParam || isLocalAdmin) {
+                document.getElementById('adminLoginSection').classList.remove('hidden');
+                if (isLocalAdmin) {
+                    document.getElementById('adminSection').classList.remove('hidden');
+                    document.getElementById('adminLoginSection').classList.add('hidden');
+                }
+            } else {
+                exitAdminMode();
+            }
+
+            // 初始化数据
+            const savedData = localStorage.getItem('labSuppliesData');
+            currentData = savedData ? JSON.parse(savedData) : defaultData;
+            if (!savedData) {
+                localStorage.setItem('labSuppliesData', JSON.stringify(defaultData));
+            }
+
+            // 绑定事件
+            document.getElementById('searchButton').addEventListener('click', performSearch);
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', handleFileImport);
+            document.getElementById('uploadButton').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('exportButton').addEventListener('click', exportToExcel);
+            document.getElementById('loginButton').addEventListener('click', adminLogin);
+            document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') adminLogin();
+            });
+
+            // 防止通过浏览器历史返回管理员模式
+            window.addEventListener('popstate', () => {
+                if (!localStorage.getItem('adminAuth')) {
+                    history.go(1);
+                }
+            });
+
+            // 点击表格单元格复制内容
+            document.addEventListener('click', (e) => {
+                if (e.target.tagName === 'TD') {
+                    copyToClipboard(e.target.textContent.trim());
+                }
+            });
+        }
+
+        // 其他功能函数
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+            const resultsBody = document.getElementById('resultsBody');
+            const noResults = document.getElementById('noResults');
+            const resultsTable = document.getElementById('resultsTable');
+            
+            resultsBody.innerHTML = '';
+            
+            if (!searchTerm) {
+                noResults.textContent = '请输入搜索关键词';
+                noResults.classList.remove('hidden');
+                resultsTable.classList.add('hidden');
+                document.getElementById('searchInfo').textContent = '';
+                return;
+            }
+            
+            const filteredData = currentData.filter(item => 
+                Object.values(item).some(value => 
+                    String(value).toLowerCase().includes(searchTerm)
+                )
+            );
+            
+            if (filteredData.length === 0) {
+                noResults.textContent = '没有找到匹配的结果';
+                noResults.classList.remove('hidden');
+                resultsTable.classList.add('hidden');
+                document.getElementById('searchInfo').textContent = `搜索 "${searchTerm}" 没有结果`;
+            } else {
+                noResults.classList.add('hidden');
+                resultsTable.classList.remove('hidden');
+                
+                filteredData.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="copyable">${item['货品名称'] || ''}</td>
+                        <td class="copyable">${item['规格'] || ''}</td>
+                        <td class="copyable">${item['单位'] || ''}</td>
+                        <td class="copyable">${item['单价'] || ''}</td>
+                        <td class="copyable">${item['品牌'] || ''}</td>
+                        <td class="copyable">${item['经办人'] || ''}</td>
+                        <td class="copyable">${item['联系方式'] || ''}</td>
+                    `;
+                    resultsBody.appendChild(row);
+                });
+                
+                document.getElementById('searchInfo').textContent = `找到 ${filteredData.length} 条匹配 "${searchTerm}" 的结果`;
+            }
+        }
+
+        function adminLogin() {
+            const password = document.getElementById('passwordInput').value;
+            if (password === ADMIN_PASSWORD) {
+                localStorage.setItem('adminAuth', 'true');
+                document.getElementById('adminSection').classList.remove('hidden');
+                document.getElementById('adminLoginSection').classList.add('hidden');
+                document.getElementById('passwordInput').value = '';
+                showToast('管理员登录成功', 2000);
+            } else {
+                showToast('密码错误', 2000);
+            }
+        }
+
+        function exportToExcel() {
+            try {
+                const ws = XLSX.utils.json_to_sheet(currentData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "耗材数据");
+                const date = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(wb, `实验室耗材数据_${date}.xlsx`);
+                showToast('导出Excel成功', 2000);
+            } catch (error) {
+                showToast('导出失败: ' + error.message, 3000);
+            }
+        }
+
+        // 启动页面
+        window.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>
